@@ -245,10 +245,44 @@
         document.addEventListener('mouseup', function() {
             isDragging = false;
         });
+submitBtn.addEventListener('click', async function() {
 
-        submitBtn.addEventListener('click', function() {
-            alert(`データを保存しました。\nX: ${currentX}\nY: ${currentY}\n\n※現在は画面表示のみです。`);
-        });
+    const subjectId = prompt("被験者IDを入力してください");
+    if (!subjectId) return;
+
+    const trialNo = prompt("試行番号を入力してください");
+    if (!trialNo) return;
+
+    try {
+
+        await fetch(
+            'https://script.google.com/macros/s/AKfycbwx8OseGy8ZG8oSX2ls3zSBlWNN5D_AMmOOUXnZWKhVvbfB78Mx3AtyhI16Yj0CzMuLtw/exec',
+            {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    subject_id: subjectId,
+                    trial: trialNo,
+                    x: currentX,
+                    y: currentY
+                })
+            }
+        );
+
+        alert(
+            `送信完了\n\n被験者ID: ${subjectId}\n試行番号: ${trialNo}\nX: ${currentX}\nY: ${currentY}`
+        );
+
+    } catch (error) {
+
+        alert("送信に失敗しました");
+
+        console.error(error);
+    }
+});
     </script>
 
 </body>
