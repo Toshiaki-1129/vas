@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2次元VAS 評価システム</title>
+
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            overscroll-behavior: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #F5F5F7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        h2 {
+            margin: 10px 0;
+            font-size: 1.2rem;
+            color: #333;
+            text-align: center;
+        }
+
+        .vas-container {
+            position: relative;
+            width: 90vw;
+            height: 90vw;
+            max-width: 500px;
+            max-height: 500px;
+            background-color: #FFFFFF;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            cursor: crosshair;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .axis-x {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: #aaa;
+            pointer-events: none;
+        }
+
+        .axis-y {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 1px;
+            height: 100%;
+            background-color: #aaa;
+            pointer-events: none;
+        }
+
+        .label {
+            position: absolute;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #555;
+            pointer-events: none;
+        }
+
+        .label-top {
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .label-bottom {
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .label-left {
+            left: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .label-right {
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        #pointer {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background-color: #FF3B30;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            pointer-events: none;
+            box-shadow: 0 0 8px rgba(255,59,48,0.6);
+            z-index: 10;
+        }
+
+        .control-panel {
+            margin-top: 20px;
+            text-align: center;
+            width: 90vw;
+            max-width: 500px;
+        }
+
+        .result-display {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .btn-submit {
+            background-color: #007AF5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 8px;
+            font-weight: bold;
+            width: 100%;
+            box-shadow: 0 2px 6px rgba(0,122,245,0.3);
+        }
+
+        .btn-submit:active {
+            background-color: #0056B3;
+        }
+
+        .btn-submit:disabled {
+            background-color: #aaa;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>現在の状態をタップ（またはドラッグ）してください</h2>
+
+    <div class="vas-container" id="vasArea">
+        <div class="axis-x"></div>
+        <div class="axis-y"></div>
+
+        <div class="label label-top">活性度 (High)</div>
+        <div class="label label-bottom">不活性度 (Low)</div>
+        <div class="label label-left">不快 (Pleasant-)</div>
+        <div class="label label-right">快 (Pleasant+)</div>
+
+        <div id="pointer"></div>
+    </div>
+
+    <div class="control-panel">
+        <div class="result-display" id="resultText">座標: 未選択</div>
+        <button class="btn-submit" id="submitBtn" disabled>データを確定する</button>
+    </div>
+
+    <script>
+        const vasArea = document.getElementById('vasArea');
+        const pointer = document.getElementById('pointer');
+        const resultText = document.getElementById('resultText');
+        const submitBtn = document.getElementById('submitBtn');
+
+        let currentX = null;
+        let currentY = null;
+        let isDragging = false;
+
+        function updatePosition(clientX, clientY) {
+            const rect = vasArea.getBoundingClientRect();
+
+            let relativeX = (clientX - rect.left) / rect.width;
+            let relativeY = (clientY - rect.top) / rect.height;
+
+            relativeX = Math.max(0, Math.min(1, relativeX));
+            relativeY = Math.max(0, Math.min(1, relativeY));
+
+            currentX = ((relativeX * 2) - 1).toFixed(2);
+            currentY = (1 - (relativeY * 2)).toFixed(2);
+
+            pointer.style.display = 'block';
+            pointer.style.left = (relativeX * 100) + '%';
+            pointer.style.top = (relativeY * 100) + '%';
+
+            resultText.innerText =
+                `X軸 (快度): ${currentX} / Y軸 (活性度): ${currentY}`;
+
+            submitBtn.disabled = false;
+        }
+
+        // iPad・スマホ用
+        vasArea.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            isDragging = true;
+            const touch = e.touches[0];
+            updatePosition(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        vasArea.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            if (!isDragging) return;
+            const touch = e.touches[0];
+            updatePosition(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        vasArea.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            isDragging = false;
+        }, { passive: false });
+
+        vasArea.addEventListener('touchcancel', function(e) {
+            e.preventDefault();
+            isDragging = false;
+        }, { passive: false });
+
+        // PC・一部タブレット用
+        vasArea.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            isDragging = true;
+            updatePosition(e.clientX, e.clientY);
+        });
+
+        vasArea.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            updatePosition(e.clientX, e.clientY);
+        });
+
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
+
+        submitBtn.addEventListener('click', function() {
+            alert(`データを保存しました。\nX: ${currentX}\nY: ${currentY}\n\n※現在は画面表示のみです。`);
+        });
+    </script>
+
+</body>
+</html>
